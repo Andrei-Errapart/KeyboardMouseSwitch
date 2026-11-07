@@ -324,8 +324,9 @@ TinyUSB host with PIO-USB.
     firmware's USB serial, in `ioreg` and `lsusb`, in logs and on the hub
     console.
   - The bootloader most likely forces the top two bits to 1, as for a BLE
-    static address. Check on the first build that the Mac mini's dongle
-    reports `E1380B5925A4`.
+    static address. **Confirmed on 2026-11-07 (bench spike):** the
+    firmware's USB serial matches the bootloader's on all three dongles
+    (`E1380B5925A4`, `DA1EAB2D90C1`, `E2E8D954B732`).
   - Zephyr's default USB serial comes from FICR `DEVICEID`, a different
     register, so the firmware sets the serial itself.
 - **A watchdog** reboots the dongle if the firmware hangs.
@@ -720,6 +721,59 @@ receivers are PTX and poll it.
 discovery costs more than expected. B also has no idle-poll delay when
 switching.
 
+**Chosen: B** (owner, 2026-11-07, after the bench spike; results in
+`docs/bench/2026-11-radio-ab.md`). By the bench's bars B misses two:
+- the active receiver's latency while another linked receiver doesn't
+  answer (T6);
+- discovery while input streams (T7 under load).
+
+Two of the rules below address them: PINGs to idle receivers go out once,
+and the bridge keeps a listening window between reports. A missed
+three latency bars, and its discovery under load was slower than a second.
+
+- **Measured** on channel 45, 2 m apart, with encryption, from the bridge's
+  queue to the receiver's application:
+  - median 715 µs, p99 1.28–1.30 ms;
+  - 0.6 reports lost in 10,000 over 100,000 reports;
+  - discovery 2.6 ms (p95), link loss noticed in 1 s.
+
+  A's median is about 920 µs, and A takes 195 ms to switch computers against
+  B's 0.7 ms.
+- **Airtime:** 0.97% of the channel with one receiver active and no input;
+  about 2.2% with seven receivers known. A's figures are 30% and 31%.
+- **ESB parameters:**
+  - 2 Mbit/s, dynamic payload length, 16-bit CRC, fast ramp-up, 0 dBm;
+  - retransmit delay 435 µs (ESB's minimum);
+  - report retries 3, HELLO retries 0;
+  - PING every 100 ms, refresh after 25 ms, link lost after 1 s.
+- **Channel:** none is fixed yet. The bench used 45 (2445 MHz); 11, 16 and
+  39 also tested clean that evening. Which channels are usable changed
+  within the day (Wi-Fi on channels 1 and 4 nearby, Keychron receivers
+  across the band). So the hub should be able to move the link to another
+  channel, rather than rely on one fixed channel.
+- **Rules the bench added:**
+  - **ESB's radio interrupt runs at the highest priority.** The PRX has the
+    TX ramp-up time (40 µs with fast ramp-up) to set up each ACK. A late
+    interrupt sends the received packet back as the ACK. At ESB's default
+    priority, behind USB and the system timer, this happened 16–25 times per
+    run.
+  - **PINGs to idle receivers go out once, without retries.** A second
+    attempt to a receiver that has just gone away holds up the active
+    receiver's reports by up to 0.9 ms.
+  - **The bridge keeps a short listening window between reports,** about
+    0.3 ms. Without it, a receiver can't join while input streams at 1 kHz:
+    0 of 20 joined on the bench.
+  - **Retries on one channel don't beat a periodic interferer.** If the link
+    hops, it hops on retry or varies the retry delay.
+  - **Placement:**
+    - dongles stay away from USB 3 hubs and cables (one beside a dongle
+      raised its noise floor by 12 dB);
+    - away from other 2.4 GHz receivers;
+    - off the floor next to the PC.
+
+    Distance (2 m, one dongle under a table) was never the problem: both
+    ends received at about -62 dBm.
+
 ## Key handling
 
 - `~/.kmswitch-key` holds the AES-128 key as 32 hex characters. It already
@@ -954,6 +1008,8 @@ The MacBook Pro joins once its dongle is flashed.
 3. Latency, airtime and reliability of radio candidates A and B, with
    encryption on. Include the active receiver's latency while another linked
    receiver is unplugged.
+   **Done, 2026-11-07:** candidate B. See "Radio link" and
+   `docs/bench/2026-11-radio-ab.md`.
 4. The dongle's HID plus CDC composite device works on both macOS and Linux,
    and macOS accepts it as a keyboard (the Keyboard Setup Assistant may appear
    once). Two further checks:
@@ -970,6 +1026,13 @@ The MacBook Pro joins once its dongle is flashed.
    (see "Dongle firmware"). Check this before the first DFU, together with
    two things from "Key handling": the key lands only in the image's first
    flash page, and the reboot command (P0.19) reaches the bootloader.
+   **Partly done, 2026-11-07 (bench spike):**
+   - The placement check works: `tools/check-dongle-image.py` checks every
+     image.
+   - The P0.19 reboot reaches the bootloader on both bench dongles.
+
+   The key-page check waits for the real dongle firmware, since the bench
+   uses a public key.
 7. Mute is reported as held. The chord needs the keyboard to report Mute as
    down for as long as the key is held. Check the Keychron in both Mac and Win
    modes, and the Rapoo. Some keyboards send media keys as an instant press
