@@ -10,5 +10,7 @@ void cmd_init(uint32_t boot_id);
 /* Handle one line; anything before "kmb " is ignored, lines without it too. */
 void cmd_handle(char *line);
 void cmd_boot_record(void);
+/* After `kmb reboot`: restore settings and start the role again. */
+void cmd_resume(void);
 /* False once `kmb reboot` asked the watchdog to reset the dongle. */
 bool cmd_feed_watchdog(void);

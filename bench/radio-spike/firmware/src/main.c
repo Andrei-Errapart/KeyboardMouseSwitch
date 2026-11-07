@@ -78,6 +78,7 @@ int main(void)
 	cmd_boot_record();
 	err_usb = ident_usb_init(usb_msg);
 	radio_init();
+	cmd_resume();
 	if (err_clk || err_stamp || err_rec || err_usb) {
 		rec_text("error init clk=%d stamp=%d rec=%d usb=%d", err_clk,
 			 err_stamp, err_rec, err_usb);

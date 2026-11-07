@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-from . import port, records, runs
+from . import port, records, report, runs
 
 REPO = pathlib.Path(__file__).resolve().parents[4]
 FIRMWARE = REPO / "bench/radio-spike/firmware"
@@ -176,6 +176,14 @@ def main(argv=None):
     sm = sub.add_parser("smoke")
     sm.add_argument("cand", choices=["A", "B"])
     sm.add_argument("--ch", type=int)
+    rn = sub.add_parser("run")
+    rn.add_argument("test", choices=list(runs.TESTS))
+    rn.add_argument("cand", choices=["A", "B"])
+    rn.add_argument("--ch", type=int, help="required except for T8, which picks")
+    rn.add_argument("--n", type=int, help="reports (T1, T4) or rounds (T5, T7)")
+    rn.add_argument("--load", action="store_true", help="T7 under load (B)")
+    rp = sub.add_parser("report")
+    rp.add_argument("--since", help="results directory prefix, e.g. 20261107T18")
     sc = sub.add_parser("scan")
     sc.add_argument("dongle", choices=[*port.DONGLES, "both"])
     sc.add_argument("--dwell", type=int, default=100)
@@ -187,6 +195,16 @@ def main(argv=None):
         return build(args)
     if args.cmd == "smoke":
         return runs.smoke(args.cand, args.ch)
+    if args.cmd == "run":
+        kw = {}
+        if args.n is not None:
+            kw["rounds" if args.test in ("T5", "T7") else "n"] = args.n
+        if args.load:
+            kw["load"] = True
+        return runs.run(args.test, args.cand, args.ch, **kw)
+    if args.cmd == "report":
+        print(report.markdown(runs.latest_results(args.since)))
+        return None
     if args.cmd == "scan":
         return scan(list(port.DONGLES) if args.dongle == "both" else [args.dongle],
                     args.dwell)

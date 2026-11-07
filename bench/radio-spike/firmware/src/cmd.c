@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/linker/section_tags.h>
 #include <zephyr/sys/atomic.h>
 
 #include "fw_version.h"
@@ -20,6 +21,28 @@ uint8_t g_role;
 uint8_t g_cand;
 static uint32_t boot_id;
 static atomic_t stop_feeding;
+
+/* `kmb reboot` keeps the role and settings across the watchdog reset, so
+ * discovery (T7) runs from boot without waiting for the host. RAM survives
+ * a watchdog reset; Zephyr doesn't clear .noinit. */
+#define KEEP_MAGIC 0x4B4D5352
+static __noinit struct {
+	uint32_t magic;
+	uint8_t role, cand;
+	struct bench_params params;
+} keep;
+
+void cmd_resume(void)
+{
+	if (keep.magic != KEEP_MAGIC) {
+		return;
+	}
+	keep.magic = 0;
+	params = keep.params;
+	if (keep.role) {
+		radio_command(CMD_ROLE, keep.role, keep.cand);
+	}
+}
 
 void cmd_init(uint32_t id)
 {
@@ -175,6 +198,10 @@ void cmd_handle(char *line)
 		ident_reboot_to_bootloader();
 	} else if (!strcmp(argv[0], "reboot")) {
 		/* Through the watchdog: a soft reset would leave it running. */
+		keep.role = g_role;
+		keep.cand = g_cand;
+		keep.params = params;
+		keep.magic = KEEP_MAGIC;
 		rec_text("ok reboot");
 		atomic_set(&stop_feeding, 1);
 	} else if (!strcmp(argv[0], "hang")) {
