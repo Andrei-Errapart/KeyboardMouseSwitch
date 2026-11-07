@@ -103,3 +103,22 @@ third option) would likely be faster still; not measured.
 The CC310 reads its input by DMA, which can't reach flash: PSA returns
 `PSA_ERROR_DATA_INVALID` for `const` buffers. Worth knowing if the product
 uses PSA.
+
+## Channel and interference
+
+On 2026-11-07, with the bridge on anduq7 under the table and the receiver
+at the Mac mini beside the Keychron receivers, PINGs acknowledged out of
+about 40 in 4 s (candidate B):
+
+| Channel | MHz | Acknowledged | Receiver heard |
+|---|---|---|---|
+| 5 | 2405 | no link | — |
+| 25 | 2425 | 25 of 31 | 29 |
+| 50 | 2450 | barely linked | — |
+| 77 | 2477 | 26 of 40 | 36 |
+| 80 | 2480 | 40 of 40 | 40 |
+
+Loss falls mostly on packets the bridge receives (ACKs, HELLOs), so the
+bridge's spot is the noisier one. Channel 80 is the default until T8 picks
+one. Fast ramp-up made no difference on channel 80 (38–40 of 40 either
+way), so it stays on.

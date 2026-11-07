@@ -11,6 +11,10 @@ target_sources(app PRIVATE
   src/ident.c
   src/wdt.c
   src/link.c
+  src/radio.c
+  src/traffic.c
+  src/cand_b.c
+  src/cand_a.c
 )
 
 # FW_VERSION: `git describe` of HEAD, "-dirty" when the firmware tree has

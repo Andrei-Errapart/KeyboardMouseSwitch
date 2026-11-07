@@ -9,6 +9,7 @@
 
 #include "cmd.h"
 #include "ident.h"
+#include "radio.h"
 #include "rec.h"
 #include "stamp.h"
 #include "wdt.h"
@@ -76,6 +77,7 @@ int main(void)
 	cmd_init(sys_rand32_get());
 	cmd_boot_record();
 	err_usb = ident_usb_init(usb_msg);
+	radio_init();
 	if (err_clk || err_stamp || err_rec || err_usb) {
 		rec_text("error init clk=%d stamp=%d rec=%d usb=%d", err_clk,
 			 err_stamp, err_rec, err_usb);

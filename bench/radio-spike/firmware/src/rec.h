@@ -15,6 +15,12 @@ enum rec_type {
 	REC_SELFTEST = 0x15, REC_MERGED = 0x16,
 };
 
+/* LINK record events. */
+enum link_event {
+	LINK_HELLO_HEARD = 2, LINK_ESTABLISHED = 3, LINK_LOST = 4, LINK_ACTIVE = 5,
+	LINK_INACTIVE = 6,
+};
+
 struct __packed rec_boot {
 	uint8_t type; uint32_t t; uint32_t boot_id; uint8_t role; uint8_t cand;
 	char serial[12]; char fw[16];

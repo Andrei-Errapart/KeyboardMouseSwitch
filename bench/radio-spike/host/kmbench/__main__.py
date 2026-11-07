@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-from . import port, records
+from . import port, records, runs
 
 REPO = pathlib.Path(__file__).resolve().parents[4]
 FIRMWARE = REPO / "bench/radio-spike/firmware"
@@ -148,12 +148,15 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="kmbench")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("build")
+    sub.add_parser("smoke").add_argument("cand", choices=["A", "B"])
     for cmd in ("info", "flash", "dfu", "selftest"):
         sub.add_parser(cmd).add_argument(
             "dongle", choices=[*port.DONGLES, "both"])
     args = ap.parse_args(argv)
     if args.cmd == "build":
         return build(args)
+    if args.cmd == "smoke":
+        return runs.smoke(args.cand)
     if args.cmd == "flash":
         make_zip()
     names = list(port.DONGLES) if args.dongle == "both" else [args.dongle]
