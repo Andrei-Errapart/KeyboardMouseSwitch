@@ -10,6 +10,7 @@ target_sources(app PRIVATE
   src/stamp.c
   src/ident.c
   src/wdt.c
+  src/link.c
 )
 
 # FW_VERSION: `git describe` of HEAD, "-dirty" when the firmware tree has

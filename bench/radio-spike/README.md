@@ -78,3 +78,28 @@ thread-level producer is slowed to that rate (about 330 µs per record
 instead of 32 µs). Records written from interrupts are not slowed; above
 that rate they are dropped and counted in `rec_dropped`. So test traffic is
 generated in interrupt context, and high-rate events are logged sparingly.
+
+## Link encryption timing
+
+`kmb selftest` checks AES-CCM against NIST SP 800-38C examples 1 and 2 and
+the bench's own packet layout (all computed independently by
+`host/tests/test_vectors.py`), the replay check and a tampered packet, and
+times the operations. Measured on both dongles on 2026-11-07, for a 17-byte
+body:
+
+| Implementation | Seal | Open | Session key |
+|---|---|---|---|
+| PSA Crypto, CC310 driver | 240 µs | 246 µs | 251 µs |
+| PSA Crypto, Oberon (software) | 250 µs | 254 µs | 172 µs |
+| ECB peripheral + software CCM (used) | 94 µs | 95 µs | 12 µs |
+
+PSA's cost is per call, not AES: one 16-byte block through
+`psa_cipher_encrypt` took about 92 µs on either driver. With PSA a report
+would spend about 0.5 ms in crypto, half the 1 ms over-the-air bar, so the
+bench uses the spec's "ECB peripheral with software CCM" option: about
+190 µs per report, within "a few hundred µs". The CCM peripheral (the
+third option) would likely be faster still; not measured.
+
+The CC310 reads its input by DMA, which can't reach flash: PSA returns
+`PSA_ERROR_DATA_INVALID` for `const` buffers. Worth knowing if the product
+uses PSA.

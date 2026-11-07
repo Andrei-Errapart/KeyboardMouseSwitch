@@ -120,6 +120,25 @@ def info(name):
         p.close()
 
 
+def selftest(name):
+    p = port.open_port(name)
+    try:
+        p.send("kmb selftest")
+        end = time.monotonic() + 5
+        while time.monotonic() < end:
+            for rec in p.records(timeout=0.5):
+                if isinstance(rec, records.SelfTest):
+                    ok = {k: "ok" if getattr(rec, f"{k}_ok") else "FAIL"
+                          for k in ("nist", "layout", "replay", "tamper")}
+                    print(f"{name} " + " ".join(f"{k}={v}" for k, v in ok.items())
+                          + f" seal={rec.enc_us}us open={rec.dec_us}us"
+                          f" session_key={rec.sk_us}us")
+                    return rec
+        raise TimeoutError(f"{name}: no SELFTEST record")
+    finally:
+        p.close()
+
+
 def dfu(name):
     enter_bootloader(name)
     print(f"{name}: bootloader at {port.wait_for_bootloader(name)}")
@@ -129,7 +148,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="kmbench")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("build")
-    for cmd in ("info", "flash", "dfu"):
+    for cmd in ("info", "flash", "dfu", "selftest"):
         sub.add_parser(cmd).add_argument(
             "dongle", choices=[*port.DONGLES, "both"])
     args = ap.parse_args(argv)
@@ -139,7 +158,8 @@ def main(argv=None):
         make_zip()
     names = list(port.DONGLES) if args.dongle == "both" else [args.dongle]
     for name in names:
-        {"info": info, "flash": flash, "dfu": dfu}[args.cmd](name)
+        {"info": info, "flash": flash, "dfu": dfu,
+         "selftest": selftest}[args.cmd](name)
 
 
 if __name__ == "__main__":

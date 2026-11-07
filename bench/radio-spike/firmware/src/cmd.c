@@ -7,6 +7,7 @@
 
 #include "fw_version.h"
 #include "ident.h"
+#include "link.h"
 #include "rec.h"
 #include "stamp.h"
 #include "wdt.h"
@@ -92,6 +93,8 @@ void cmd_handle(char *line)
 		for (;;) {
 			k_sleep(K_FOREVER);
 		}
+	} else if (!strcmp(argv[0], "selftest")) {
+		link_selftest();
 	} else if (!strcmp(argv[0], "flood")) {
 		cmd_flood(argc, argv);
 	} else {
