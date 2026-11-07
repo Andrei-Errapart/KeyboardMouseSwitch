@@ -383,11 +383,13 @@ def run(test, cand, ch, **kw):
 
 
 def latest_results(since=None):
-    """The newest result.json per (test, candidate)."""
+    """The newest result.json per (test, candidate). T7 under load is kept
+    apart as "T7load": the discovery bar judges T7 without load."""
     out = {}
     for f in sorted(RESULTS.glob("*/result.json")):
         if since and f.parent.name < since:
             continue
         r = json.loads(f.read_text())
-        out.setdefault(r["cand"], {})[r["test"]] = r
+        test = r["test"] + ("load" if r.get("load") else "")
+        out.setdefault(r["cand"], {})[test] = r
     return out

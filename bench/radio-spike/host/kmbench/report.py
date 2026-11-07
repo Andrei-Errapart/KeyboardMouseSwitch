@@ -16,12 +16,13 @@ LIVENESS_BAR_MS = 1200.0    # link loss after 1 s, plus margin
 
 TITLES = {
     "T1": "single reports", "T2": "load", "T3": "idle airtime", "T4": "reliability",
-    "T5": "switch delay", "T6": "absent receiver", "T7": "discovery", "T7b": "liveness",
-    "T8": "channels",
+    "T5": "switch delay", "T6": "absent receiver", "T7": "discovery",
+    "T7load": "discovery under load", "T7b": "liveness",
+    "T4swap": "reliability, roles swapped", "T8": "channels",
 }
 COLUMNS = ["p50", "p95", "p99", "max", "delivered", "lost", "dups", "loss_per_10k",
            "merged", "queue_dropped", "busy_fraction", "transaction_us",
-           "busy_fraction_seven", "ms", "retries"]
+           "busy_fraction_seven", "ms", "rounds", "retries"]
 
 
 @dataclass(frozen=True)
