@@ -20,5 +20,6 @@ struct report {
 int traffic_start(enum pattern p, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
 void traffic_stop(void);
 bool traffic_next(uint8_t pipe, struct report *out);
+uint8_t traffic_count(uint8_t pipe); /* reports queued, not yet given to ESB */
 /* An empty queue's motion state: the bridge doesn't keep one (bench). */
 void report_data(const struct report *r, uint8_t data[11]);

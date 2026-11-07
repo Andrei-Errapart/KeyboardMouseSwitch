@@ -32,17 +32,26 @@ static void stamp_isr(const void *arg)
 
 	uint32_t t = nrf_timer_cc_get(STAMP_TIMER, NRF_TIMER_CC_CHANNEL1);
 
+	/* A late interrupt may find the packet over and the radio disabling;
+	 * that still tells the direction. Ramp-up states belong to the next
+	 * packet (the ACK turnaround), so they don't. */
 	switch (nrf_radio_state_get(NRF_RADIO)) {
 	case NRF_RADIO_STATE_TX:
+	case NRF_RADIO_STATE_TXDISABLE:
 		last_tx = t;
 		n_tx++;
 		break;
 	case NRF_RADIO_STATE_RX:
+	case NRF_RADIO_STATE_RXDISABLE:
 		last_rx = t;
 		n_rx++;
 		break;
 	default:
-		n_lost++; /* ran too late to tell the direction */
+		/* Ran too late to tell the direction. Forget both stamps, so no
+		 * record carries a stale one into a false clock pair. */
+		last_tx = 0;
+		last_rx = 0;
+		n_lost++;
 		break;
 	}
 }

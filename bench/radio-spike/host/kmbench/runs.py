@@ -6,6 +6,9 @@ from . import clockfit, metrics, port
 from .records import Link, LINK_ESTABLISHED, Text, unwrap_all
 
 BRIDGE, RECEIVER = "anduq7", "macmini"
+# A learns it is active only at an idle poll (up to ~200 ms, see README):
+# latency runs start after that; T5 measures the switch itself.
+ACTIVATE_SETTLE_S = 0.5
 
 
 class Recorder:
@@ -66,9 +69,13 @@ def reset(*recorders, settle=1.5):
     return [x.mark() for x in recorders]
 
 
-def start_link(b, r, cand, timeout=3.0):
-    """Bridge and receiver roles for `cand`; returns the receiver's pipe."""
+def start_link(b, r, cand, timeout=3.0, settings=()):
+    """Bridge and receiver roles for `cand`, after `kmb set` lines given in
+    `settings` (sent to both); returns the receiver's pipe."""
     since_b, since_r = reset(b, r)
+    for line in settings:
+        b.send(line)
+        r.send(line)
     b.send(f"kmb role bridge {cand}")
     r.send(f"kmb role receiver {cand}")
     est = lambda rec: isinstance(rec, Link) and rec.event == LINK_ESTABLISHED
@@ -98,11 +105,12 @@ def analyse(bridge, receiver):
     return fit, metrics.latency(bridge, receiver, fit)
 
 
-def smoke(cand):
+def smoke(cand, ch=None):
     b, r = Recorder(BRIDGE), Recorder(RECEIVER)
     try:
-        pipe = start_link(b, r, cand)
+        pipe = start_link(b, r, cand, settings=[f"kmb set ch {ch}"] if ch is not None else [])
         b.send(f"kmb active {pipe}")
+        time.sleep(ACTIVATE_SETTLE_S)
         b.send("kmb traffic single 200 20 50")
         time.sleep(15)
     except Exception:
@@ -110,7 +118,7 @@ def smoke(cand):
         raise
     bridge, receiver = finish(b, r)
     fit, lat = analyse(bridge, receiver)
-    print(f"smoke {cand}: delivered {lat.delivered}, lost {lat.lost}, dups {lat.dups}; "
+    print(f"smoke {cand}{f' ch {ch}' if ch is not None else ''}: delivered {lat.delivered}, lost {lat.lost}, dups {lat.dups}; "
           f"clock fit n={fit.n} resid p99 {fit.resid_p99_us:.1f} µs, "
           f"drift {fit.drift_ppm:.1f} ppm")
     print(f"latency µs: p50 {lat.p50:.0f}  p99 {lat.p99:.0f}  max {lat.max:.0f}")

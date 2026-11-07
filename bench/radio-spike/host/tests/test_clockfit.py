@@ -76,3 +76,11 @@ def test_pairs_need_same_kind():
     bridge = [_txdone(1, 1, 1000, kind=REPORT)]
     receiver = [_rxpkt(1, 9000, kind=POLL)]
     assert clockfit.pairs(bridge, receiver) == []
+
+
+def test_pairs_skip_unknown_stamps():
+    # The firmware zeroes both stamps when it couldn't tell an ADDRESS
+    # event's direction, so a stale stamp never makes a false pair.
+    bridge = [_txdone(1, 1, 0), _txdone(2, 1, 5000)]
+    receiver = [_rxpkt(1, 9000), _rxpkt(2, 0)]
+    assert clockfit.pairs(bridge, receiver) == []

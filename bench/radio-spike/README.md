@@ -122,3 +122,34 @@ Loss falls mostly on packets the bridge receives (ACKs, HELLOs), so the
 bridge's spot is the noisier one. Channel 80 is the default until T8 picks
 one. Fast ramp-up made no difference on channel 80 (38–40 of 40 either
 way), so it stays on.
+
+## RSSI scan
+
+`python3 -m kmbench scan both --dwell 100` samples every channel on both
+dongles at once. On 2026-11-07, with no bench traffic:
+
+- anduq7's dongle (under the table) has a broadband noise floor of
+  -78 to -80 dBm across the whole band, above -80 dBm 66–100% of the time
+  at 2400–2445 MHz and 10–40% above that: USB 3 or PC noise at that spot.
+  The Mac mini's dongle sees -83 to -84 dBm.
+- At the Mac mini, strong bursts (up to -18 dBm) at 2423–2433 and
+  2470–2475 MHz: the Keychron receivers beside it.
+- Which channels work changes within minutes: channel 80 went from 40 of
+  40 PINGs acknowledged to 1 of 15.
+
+The bridge's reception is the weak link, and the product's bridge sits on
+the hub on anduq7, in the same spot unless it goes on an extension.
+
+## Candidate A loses reports where B doesn't
+
+With ESB, A's bridge drops a report as delivered when the next new poll
+arrives, even if every ACK that carried it was lost and the receiver gave
+up on that poll. On channel 68, with 12% of polls failing all four
+attempts, A lost 30 of 200 reports; of the lost ones, 22 had their
+carrying poll fail at the receiver, against 1 of the 170 delivered. B, run
+interleaved on the same channels, lost 1–4 of 200. Under clean conditions
+A lost none.
+
+A also learns it is active only at an idle poll: when the switch comes, a
+STATUS already waits in ESB for that pipe and can't be replaced, so the
+first input can wait about two idle polls (up to ~200 ms), not one.

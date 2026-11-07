@@ -20,11 +20,13 @@ static struct {
 	uint8_t clear[16];
 	uint8_t cipher[16];
 } __aligned(4) ecb;
-static struct k_spinlock ecb_lock;
+/* A mutex, not a spinlock: with interrupts off for each block, the
+ * ADDRESS-stamp interrupt ran late and lost stamps. Threads only. */
+K_MUTEX_DEFINE(ecb_lock);
 
 void link_aes_block(const uint8_t key[16], const uint8_t in[16], uint8_t out[16])
 {
-	k_spinlock_key_t k = k_spin_lock(&ecb_lock);
+	k_mutex_lock(&ecb_lock, K_FOREVER);
 
 	memcpy(ecb.key, key, 16);
 	memcpy(ecb.clear, in, 16);
@@ -37,7 +39,7 @@ void link_aes_block(const uint8_t key[16], const uint8_t in[16], uint8_t out[16]
 	}
 	memcpy(out, ecb.cipher, 16);
 	memset(ecb.key, 0, 16);
-	k_spin_unlock(&ecb_lock, k);
+	k_mutex_unlock(&ecb_lock);
 }
 
 static void xor16(uint8_t *x, const uint8_t *b, size_t n)

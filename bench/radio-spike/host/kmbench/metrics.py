@@ -103,7 +103,9 @@ def discovery_times(records: list) -> list:
     return out
 
 
-_COUNTERS = ("rec_dropped", "stamp_lost")
+# stamp_lost is not here: lost stamps are zeroed and skipped by the clock
+# fit, so they cost pairs, not correctness.
+_COUNTERS = ("rec_dropped",)
 
 
 def check_run(records: list, allow_reboot: bool = False) -> None:

@@ -162,10 +162,10 @@ def test_run_final_text_is_fine():
     metrics.check_run([stats(1), tx(), stats(2), Text(text="ok stats")])
 
 
-def test_run_invalid_on_lost_stamps():
-    with pytest.raises(metrics.RunInvalid):
-        metrics.check_run([stats(1, stamp_lost=0), tx(),
-                           stats(2, stamp_lost=2)])
+def test_run_valid_despite_lost_stamps():
+    # Lost stamps are zeroed in the firmware and skipped by the clock fit:
+    # they cost pairs, not correctness.
+    metrics.check_run([stats(1, stamp_lost=0), tx(), stats(2, stamp_lost=2)])
 
 
 def test_run_invalid_on_reboot():

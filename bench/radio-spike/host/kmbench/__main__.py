@@ -139,6 +139,31 @@ def selftest(name):
         p.close()
 
 
+def scan(names, dwell_ms):
+    """RSSI per channel on each dongle at the same time."""
+    recs = {n: runs.Recorder(n) for n in names}
+    marks = dict(zip(recs, runs.reset(*recs.values(), settle=1.0)))
+    for x in recs.values():
+        x.send(f"kmb scan {dwell_ms}")
+    for n, x in recs.items():
+        x.wait_for(lambda r: isinstance(r, records.Text) and r.text == "ok scan",
+                   81 * dwell_ms / 1000 + 10, marks[n])
+    rows = {n: {r.channel: r for _, r in x.records[marks[n]:]
+                if isinstance(r, records.Scan)} for n, x in recs.items()}
+    for x in recs.values():
+        x.stop()
+    print("ch  MHz  " + "  ".join(f"{n:>22}" for n in names))
+    for ch in range(81):
+        cells = []
+        for n in names:
+            r = rows[n].get(ch)
+            cells.append(f"{r.rssi_median:4d} {r.rssi_max:4d} {r.busy_permille / 10:5.1f}% "
+                         f"{'#' * (r.busy_permille // 50):<6}" if r else " " * 22)
+        print(f"{ch:2d} {2400 + ch} " + "  ".join(cells))
+    print("columns per dongle: median dBm, max dBm, time above -80 dBm")
+    return rows
+
+
 def dfu(name):
     enter_bootloader(name)
     print(f"{name}: bootloader at {port.wait_for_bootloader(name)}")
@@ -148,7 +173,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="kmbench")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("build")
-    sub.add_parser("smoke").add_argument("cand", choices=["A", "B"])
+    sm = sub.add_parser("smoke")
+    sm.add_argument("cand", choices=["A", "B"])
+    sm.add_argument("--ch", type=int)
+    sc = sub.add_parser("scan")
+    sc.add_argument("dongle", choices=[*port.DONGLES, "both"])
+    sc.add_argument("--dwell", type=int, default=100)
     for cmd in ("info", "flash", "dfu", "selftest"):
         sub.add_parser(cmd).add_argument(
             "dongle", choices=[*port.DONGLES, "both"])
@@ -156,7 +186,10 @@ def main(argv=None):
     if args.cmd == "build":
         return build(args)
     if args.cmd == "smoke":
-        return runs.smoke(args.cand)
+        return runs.smoke(args.cand, args.ch)
+    if args.cmd == "scan":
+        return scan(list(port.DONGLES) if args.dongle == "both" else [args.dongle],
+                    args.dwell)
     if args.cmd == "flash":
         make_zip()
     names = list(port.DONGLES) if args.dongle == "both" else [args.dongle]

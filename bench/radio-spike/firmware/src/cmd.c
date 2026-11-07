@@ -189,6 +189,10 @@ void cmd_handle(char *line)
 			      argc > 1 && strcmp(argv[1], "none") ? strtoul(argv[1], NULL, 10) : 0, 0);
 	} else if (!strcmp(argv[0], "phantom")) {
 		radio_command(CMD_PHANTOM, argc > 1 ? strtoul(argv[1], NULL, 10) : 1, 0);
+	} else if (!strcmp(argv[0], "scan")) {
+		unsigned long dwell = argc > 1 ? strtoul(argv[1], NULL, 10) : 200;
+
+		radio_command(CMD_SCAN, dwell & 0xff, (dwell >> 8) & 0xff);
 	} else if (!strcmp(argv[0], "set")) {
 		cmd_set(argc, argv);
 	} else if (!strcmp(argv[0], "traffic")) {

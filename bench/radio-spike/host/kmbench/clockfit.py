@@ -51,10 +51,11 @@ def _first_try(senders, receivers):
 
 
 def pairs(bridge: list, receiver: list) -> list:
-    """(t_bridge, t_receiver) for every packet both clocks stamped."""
+    """(t_bridge, t_receiver) for every packet both clocks stamped. A stamp
+    of 0 means the firmware couldn't attribute it, and is skipped."""
     out = [(tx.t_tx_addr, rx.t_rx_addr) for tx, rx in _first_try(bridge, receiver)]
     out += [(rx.t_rx_addr, tx.t_tx_addr) for tx, rx in _first_try(receiver, bridge)]
-    return out
+    return [(b, r) for b, r in out if b and r]
 
 
 def fit(pairs: list) -> Fit:

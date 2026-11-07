@@ -29,7 +29,7 @@ enum radio_evt_type {
 	RADIO_EVT_TX_OK, RADIO_EVT_TX_FAIL, RADIO_EVT_RX, RADIO_EVT_WAKE, RADIO_EVT_CMD,
 };
 
-enum radio_cmd { CMD_ROLE, CMD_ACTIVE, CMD_PHANTOM };
+enum radio_cmd { CMD_ROLE, CMD_ACTIVE, CMD_PHANTOM, CMD_SCAN };
 
 struct radio_evt {
 	uint8_t type;
@@ -58,6 +58,7 @@ extern const struct cand cand_b;
 extern const struct cand cand_a;
 
 int radio_init(void);
+void scan_run(uint16_t dwell_ms); /* radio thread; stops any role first */
 void radio_command(enum radio_cmd cmd, uint8_t arg1, uint8_t arg2);
 void radio_wake(void); /* from any context */
 uint8_t radio_active_pipe(void);
@@ -71,6 +72,8 @@ int radio_ack_payload(uint8_t pipe, const uint8_t *buf, uint8_t len);
 /* Take the next queued event if it is the ACK payload of the packet just
  * acknowledged (same pipe); ESB posts it right after TX success. */
 bool radio_take_ack(uint8_t pipe, struct radio_evt *out);
+/* The next queued event without taking it; false if none. */
+bool radio_peek(struct radio_evt *out);
 int64_t radio_now_us(void);
 
 /* Peer table, bridge side. */

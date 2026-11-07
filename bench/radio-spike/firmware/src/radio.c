@@ -199,6 +199,11 @@ bool radio_take_ack(uint8_t pipe, struct radio_evt *out)
 	return false;
 }
 
+bool radio_peek(struct radio_evt *out)
+{
+	return k_msgq_peek(&radio_q, out) == 0;
+}
+
 void self_addr(uint8_t out[6])
 {
 	sys_put_be16((uint16_t)NRF_FICR->DEVICEADDR[1] | 0xC000, out);
@@ -405,6 +410,16 @@ static void do_command(const struct radio_evt *e)
 		if (cand && cand->phantom) {
 			cand->phantom(e->arg1);
 		}
+		break;
+	case CMD_SCAN:
+		if (cand) {
+			cand->stop();
+		}
+		traffic_stop();
+		cand = NULL;
+		g_role = 0;
+		g_cand = 0;
+		scan_run(e->arg1 | (e->arg2 << 8));
 		break;
 	}
 }

@@ -170,6 +170,15 @@ bool traffic_next(uint8_t pipe, struct report *out)
 	return got;
 }
 
+uint8_t traffic_count(uint8_t pipe)
+{
+	k_spinlock_key_t k = k_spin_lock(&lock);
+	uint8_t n = q[pipe].count;
+
+	k_spin_unlock(&lock, k);
+	return n;
+}
+
 void report_data(const struct report *r, uint8_t data[11])
 {
 	memset(data, 0, 11);

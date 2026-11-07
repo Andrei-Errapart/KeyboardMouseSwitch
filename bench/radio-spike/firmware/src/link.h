@@ -4,7 +4,7 @@
  * PSA Crypto was measured at about 250 µs per seal or open of a 17-byte
  * body, on the CC310 and on Oberon alike (fixed per-call cost, about 90 µs
  * per AES block), so the bench uses the spec's "ECB peripheral with
- * software CCM" option. Safe from threads and interrupts. */
+ * software CCM" option. Threads only (a mutex guards the ECB). */
 #pragma once
 #include <stdbool.h>
 #include <stddef.h>
