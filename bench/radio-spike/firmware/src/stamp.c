@@ -1,8 +1,11 @@
 /*
  * TIMER3 counts microseconds. A PPI channel from RADIO EVENTS_ADDRESS
  * captures it into CC[1] and, through the fork, triggers EGU3. The EGU3
- * interrupt, at a higher priority than both of ESB's, files the capture as
- * sent or received from RADIO->STATE before ESB's callback runs. ESB uses
+ * interrupt, at a higher priority than ESB's event interrupt (2) and equal
+ * to its radio interrupt (0, see prj.conf), files the capture as sent or
+ * received from RADIO->STATE before ESB's callback runs. The two don't
+ * collide: ADDRESS comes well after the radio interrupt that set up the
+ * packet has returned. ESB uses
  * TIMER2 and EGU0 on the nRF52840, so TIMER3 and EGU3 are free.
  */
 #include "stamp.h"

@@ -165,3 +165,22 @@ A lost none.
 A also learns it is active only at an idle poll: when the switch comes, a
 STATUS already waits in ESB for that pipe and can't be replaced, so the
 first input can wait about two idle polls (up to ~200 ms), not one.
+
+## ESB's radio interrupt must come first
+
+ESB's PRX turns from receive to transmit in hardware to send the ACK. Its
+radio interrupt then has the TX ramp-up time (40 µs with fast ramp-up,
+129 µs without) to point the radio at the ACK buffer. If it runs late, the
+radio sends the packet it just received back as the ACK. The PTX has the
+same deadline when it turns to receive the ACK.
+
+At ESB's default priority 1, the radio interrupt shares its priority with
+USB and the system timer and can't preempt them. On 2026-11-07, candidate
+A's receiver got 16–25 of its own POLLs back as ACK payloads per T1 run,
+each counted as a MIC failure (15 of 15 logged were byte-for-byte echoes).
+By ESB's logic the bridge then also drops the payload that ACK should have
+carried. With the radio interrupt at priority 0: none in two runs. A's
+results from before that change carry this artifact.
+
+The product's dongle runs USB and the radio together, so its radio
+interrupt goes above everything else.
