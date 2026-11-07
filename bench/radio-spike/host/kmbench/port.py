@@ -45,6 +45,10 @@ DONGLES = {
                       "/dev/cu.usbmodemE1380B5925A4*"),
     "anduq7": Dongle("anduq7", "DA1EAB2D90C1", "anduq7",
                      "/dev/serial/by-id/usb-*_DA1EAB2D90C1-if00"),
+    # Third dongle, meant for the MacBook Pro: on the bench, a second
+    # receiver or a controlled interferer beside the Mac mini's receiver.
+    "macmini2": Dongle("macmini2", "E2E8D954B732", None,
+                       "/dev/cu.usbmodemE2E8D954B732*"),
 }
 
 

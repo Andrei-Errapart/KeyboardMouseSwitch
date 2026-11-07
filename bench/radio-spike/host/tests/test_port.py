@@ -148,6 +148,11 @@ def test_dongle_table():
     assert port.DONGLES["anduq7"].host == "anduq7"
     assert port.DONGLES["anduq7"].port_glob == (
         "/dev/serial/by-id/usb-*_DA1EAB2D90C1-if00")
+    # The third dongle (for the MacBook Pro later) joins the bench on the
+    # Mac mini as a second receiver or a controlled interferer.
+    assert port.DONGLES["macmini2"].serial == "E2E8D954B732"
+    assert port.DONGLES["macmini2"].host is None
+    assert port.DONGLES["macmini2"].port_glob == "/dev/cu.usbmodemE2E8D954B732*"
 
 
 def test_remote_command_uses_socat_with_keepalive():

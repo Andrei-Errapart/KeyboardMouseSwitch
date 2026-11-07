@@ -16,6 +16,7 @@ target_sources(app PRIVATE
   src/cand_b.c
   src/cand_a.c
   src/scan.c
+  src/jam.c
 )
 
 # FW_VERSION: `git describe` of HEAD, "-dirty" when the firmware tree has

@@ -30,7 +30,7 @@ enum radio_evt_type {
 	RADIO_EVT_TX_OK, RADIO_EVT_TX_FAIL, RADIO_EVT_RX, RADIO_EVT_WAKE, RADIO_EVT_CMD,
 };
 
-enum radio_cmd { CMD_ROLE, CMD_ACTIVE, CMD_PHANTOM, CMD_SCAN };
+enum radio_cmd { CMD_ROLE, CMD_ACTIVE, CMD_PHANTOM, CMD_SCAN, CMD_JAM };
 
 struct radio_evt {
 	uint8_t type;
@@ -57,6 +57,8 @@ struct cand {
 };
 extern const struct cand cand_b;
 extern const struct cand cand_a;
+extern const struct cand cand_jam; /* `kmb jam`, see jam.c */
+void jam_set(uint8_t ch, uint8_t percent);
 
 int radio_init(void);
 void scan_run(uint16_t dwell_ms); /* radio thread; stops any role first */

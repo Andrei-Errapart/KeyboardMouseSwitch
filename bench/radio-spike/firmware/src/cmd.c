@@ -221,6 +221,16 @@ void cmd_handle(char *line)
 			      argc > 1 && strcmp(argv[1], "none") ? strtoul(argv[1], NULL, 10) : 0, 0);
 	} else if (!strcmp(argv[0], "phantom")) {
 		radio_command(CMD_PHANTOM, argc > 1 ? strtoul(argv[1], NULL, 10) : 1, 0);
+	} else if (!strcmp(argv[0], "jam")) {
+		bool off = argc < 2 || !strcmp(argv[1], "off");
+		long ch = off ? 0 : strtol(argv[1], NULL, 0);
+		long pct = off || argc < 3 ? 0 : strtol(argv[2], NULL, 0);
+
+		if (!off && (ch < 0 || ch > 80 || pct < 1 || pct > 75)) {
+			rec_text("error jam: <ch 0..80> <percent 1..75> | off");
+		} else {
+			radio_command(CMD_JAM, (uint8_t)ch, (uint8_t)pct);
+		}
 	} else if (!strcmp(argv[0], "scan")) {
 		unsigned long dwell = argc > 1 ? strtoul(argv[1], NULL, 10) : 200;
 

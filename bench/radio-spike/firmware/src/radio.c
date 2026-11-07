@@ -423,6 +423,24 @@ static void do_command(const struct radio_evt *e)
 		g_cand = 0;
 		scan_run(e->arg1 | (e->arg2 << 8));
 		break;
+	case CMD_JAM:
+		if (cand) {
+			cand->stop(); /* a running jam reports what it sent */
+		} else if (!e->arg2) {
+			rec_text("ok jam off: not running");
+		}
+		traffic_stop();
+		cand = NULL;
+		g_role = 0;
+		g_cand = 0;
+		radio_mode(RADIO_OFF, 0);
+		if (e->arg2) {
+			jam_set(e->arg1, e->arg2);
+			cand = &cand_jam;
+			cand->start();
+			rec_text("ok jam ch %u %u %%", e->arg1, e->arg2);
+		}
+		break;
 	}
 }
 
