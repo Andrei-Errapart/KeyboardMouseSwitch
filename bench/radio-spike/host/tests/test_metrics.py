@@ -181,3 +181,21 @@ def test_run_allowed_reboot_judges_each_boot():
     with pytest.raises(metrics.RunInvalid):
         metrics.check_run([stats(1), boot(5), stats(2, rec_dropped=0), tx(),
                            stats(3, rec_dropped=4)], allow_reboot=True)
+
+
+def test_lost_after_ack_finds_reports_acknowledged_but_never_delivered():
+    # B: ESB's receiver takes a packet whose PID and CRC match the previous
+    # one for a retransmission: it acknowledges it and drops it. The bridge
+    # re-initialises ESB, and so restarts PIDs, at every switch to listening.
+    # Such a loss isn't radio loss and no retry can recover it.
+    from kmbench.records import Queued, TxDone, RxPkt
+    from kmbench import metrics
+    bridge = [Queued(t=1, id=1, pipe=1), Queued(t=2, id=2, pipe=1), Queued(t=3, id=3, pipe=1),
+              TxDone(t=4, id=1, pipe=1, kind=3, attempts=1, ok=1, len=25, ack_len=16,
+                     t_tx_addr=4, t_rx_addr=5),
+              TxDone(t=6, id=2, pipe=1, kind=3, attempts=4, ok=0, len=25, ack_len=0,
+                     t_tx_addr=6, t_rx_addr=0),
+              TxDone(t=8, id=3, pipe=1, kind=3, attempts=1, ok=1, len=25, ack_len=16,
+                     t_tx_addr=8, t_rx_addr=9)]
+    receiver = [RxPkt(t=5, id=1, pipe=1, kind=3, len=25, rssi=60, t_rx_addr=5)]
+    assert metrics.lost_after_ack(bridge, receiver) == [3]

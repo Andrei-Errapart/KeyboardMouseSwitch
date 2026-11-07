@@ -171,7 +171,8 @@ def latency_result(bridge, receiver):
     fit = clockfit.fit(clockfit.pairs(bridge, receiver))
     lat = metrics.latency(bridge, receiver, fit)
     return {"p50": lat.p50, "p99": lat.p99, "max": lat.max, "delivered": lat.delivered,
-            "lost": lat.lost, "dups": lat.dups, "merged": counter_rise(bridge, "merged"),
+            "lost": lat.lost, "lost_after_ack": len(metrics.lost_after_ack(bridge, receiver)),
+            "dups": lat.dups, "merged": counter_rise(bridge, "merged"),
             "queue_dropped": counter_rise(bridge, "queue_dropped"),
             "fit_n": fit.n, "resid_p99": fit.resid_p99_us,
             "mic_fail": counter_rise(bridge, "mic_fail") + counter_rise(receiver, "mic_fail"),

@@ -61,6 +61,25 @@ def latency(bridge: list, receiver: list, fit: Fit) -> Latency:
                    delivered=delivered, lost=lost, dups=dups, merged=merged)
 
 
+def lost_after_ack(bridge: list, receiver: list) -> list:
+    """Ids of lost reports the bridge saw acknowledged on air (B). ESB's
+    receiver drops a packet whose PID and CRC match the previous one as a
+    retransmission, after acknowledging it; the bench bridge restarts PIDs
+    at every re-initialisation of ESB. Not radio loss, and no retry helps."""
+    into = {m.id: m.into for m in bridge if isinstance(m, Merged)}
+    got = {r.id for r in receiver if isinstance(r, RxPkt) and r.kind == KIND_REPORT}
+    acked = {t.id for t in bridge if isinstance(t, TxDone) and t.kind == KIND_REPORT and t.ok}
+    out = []
+    for q in (r for r in bridge if isinstance(r, Queued)):
+        target, seen = q.id, {q.id}
+        while target in into and into[target] not in seen:
+            target = into[target]
+            seen.add(target)
+        if target not in got and target in acked:
+            out.append(q.id)
+    return out
+
+
 def airtime(records: list, seconds: float) -> float:
     """Fraction of time a packet of ours is on air."""
     busy = sum(r.attempts * air(r.len) + (air(r.ack_len) if r.ok else 0)
