@@ -11,6 +11,11 @@ from .records import RxPkt, TxDone
 
 MIN_PAIRS = 20
 MAX_RESID_P99_US = 20.0
+# ADDRESS fires this long after the address is on air, nRF52840 at 2 Mbit/s
+# (Zephyr's radio_nrf52840.h). B's pairs all run bridge -> receiver and A's
+# the other way, so without the correction the offset is 4.4 µs off.
+TX_CHAIN_DELAY_US = 0.6
+RX_CHAIN_DELAY_US = 5.0
 
 
 class ClockFitError(Exception):
@@ -51,11 +56,13 @@ def _first_try(senders, receivers):
 
 
 def pairs(bridge: list, receiver: list) -> list:
-    """(t_bridge, t_receiver) for every packet both clocks stamped. A stamp
-    of 0 means the firmware couldn't attribute it, and is skipped."""
-    out = [(tx.t_tx_addr, rx.t_rx_addr) for tx, rx in _first_try(bridge, receiver)]
-    out += [(rx.t_rx_addr, tx.t_tx_addr) for tx, rx in _first_try(receiver, bridge)]
-    return [(b, r) for b, r in out if b and r]
+    """(t_bridge, t_receiver) at the moment each packet both clocks stamped
+    was on air, corrected for the radio's chain delays. A stamp of 0 means
+    the firmware couldn't attribute it, and is skipped."""
+    tx_d, rx_d = TX_CHAIN_DELAY_US, RX_CHAIN_DELAY_US
+    out = [(tx.t_tx_addr, tx_d, rx.t_rx_addr, rx_d) for tx, rx in _first_try(bridge, receiver)]
+    out += [(rx.t_rx_addr, rx_d, tx.t_tx_addr, tx_d) for tx, rx in _first_try(receiver, bridge)]
+    return [(b - bd, r - rd) for b, bd, r, rd in out if b and r]
 
 
 def fit(pairs: list) -> Fit:

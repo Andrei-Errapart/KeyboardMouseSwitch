@@ -55,7 +55,7 @@ def _rxpkt(id, t_rx, kind=REPORT):
 def test_pairs_first_attempt_only():
     bridge = [_txdone(1, 1, 1000), _txdone(2, 2, 5000)]
     receiver = [_rxpkt(1, 9000), _rxpkt(2, 13435)]
-    assert clockfit.pairs(bridge, receiver) == [(1000, 9000)]
+    assert clockfit.pairs(bridge, receiver) == [(pytest.approx(999.4), pytest.approx(8995.0))]
 
 
 def test_pairs_skip_failed_transmissions():
@@ -69,7 +69,18 @@ def test_pairs_from_receiver_polls():
     # Pairs are still (bridge time, receiver time).
     receiver = [_txdone(7, 1, 20000, kind=POLL)]
     bridge = [_rxpkt(7, 12000, kind=POLL)]
-    assert clockfit.pairs(bridge, receiver) == [(12000, 20000)]
+    assert clockfit.pairs(bridge, receiver) == [(pytest.approx(11995.0), pytest.approx(19999.4))]
+
+
+def test_pairs_correct_for_radio_chain_delays():
+    # The nRF52840 raises ADDRESS 0.6 µs after the address leaves the
+    # antenna when sending and 5.0 µs after it arrives when receiving, at
+    # 2 Mbit/s (Zephyr's radio_nrf52840.h). Uncorrected, pairs that all run
+    # one way bias the clock offset by 4.4 µs. One on-air instant at which
+    # both clocks read 1000.0 must give the pair (1000.0, 1000.0).
+    bridge = [_txdone(1, 1, 1000.6)]
+    receiver = [_rxpkt(1, 1005.0)]
+    assert clockfit.pairs(bridge, receiver) == [(pytest.approx(1000.0), pytest.approx(1000.0))]
 
 
 def test_pairs_need_same_kind():
