@@ -43,3 +43,38 @@ tools/check-dongle-image.py ~/build/kms/radio-spike/firmware/zephyr/zephyr.hex
 
 Zephyr's `hello_world` for this board gives `OK: 0x1000-0xc848` with
 NCS v3.4.2.
+
+## Build, flash, query
+
+From `bench/radio-spike/host`:
+
+```
+python3 -m kmbench build              # west build, placement check, DFU zip
+python3 -m kmbench flash both         # or macmini / anduq7
+python3 -m kmbench info both
+python3 -m kmbench dfu macmini        # reboot into the bootloader (P0.19)
+```
+
+`flash` reboots a running dongle into its bootloader with `kmb dfu`, waits
+for the bootloader to answer a DFU ping, runs `nrfutil nrf5sdk-tools dfu
+usb-serial` (on anduq7 over SSH, from the repo's `/data/...` path) and waits
+for the new firmware's Boot record with the expected serial. No button.
+
+Checked on 2026-11-07 with both dongles:
+
+- the firmware's USB serial matches the bootloader's (`E1380B5925A4`,
+  `DA1EAB2D90C1`), as `1209:0001` "KMSwitch KMS radio bench";
+- `kmb dfu` (P0.19 low) reaches the bootloader, which then lists the
+  application at `0x01000`;
+- the watchdog resets a hung dongle in 2 s, `kmb reboot` goes through it,
+  and it runs again after that reboot;
+- ModemManager on anduq7 leaves the port alone (CDC protocol 0).
+
+## Record stream limits
+
+While the host reads, the USB stack takes most of the CPU: the stream tops
+out at about 3,000 STATS-sized records per second (≈147 KB/s), and a
+thread-level producer is slowed to that rate (about 330 µs per record
+instead of 32 µs). Records written from interrupts are not slowed; above
+that rate they are dropped and counted in `rec_dropped`. So test traffic is
+generated in interrupt context, and high-rate events are logged sparingly.
