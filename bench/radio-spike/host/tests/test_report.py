@@ -11,6 +11,8 @@ GOOD = {
     "T5": {"p50": 3.0, "p95": 90.0, "max": 120.0, "dups": 0},
     "T6": {"p50": 420.0, "p99": 1300.0, "max": 1600.0, "delivered": 1000, "lost": 0, "dups": 0},
     "T7": {"p50": 120.0, "p95": 1000.0, "max": 1400.0},
+    # Owner, 2026-11-08: the discovery bar applies under load too.
+    "T7load": {"p50": 300.0, "p95": 1000.0, "max": 1400.0},
     "T7b": {"ms": 1200.0},
 }
 
@@ -32,7 +34,7 @@ def test_judge_passes_good_run():
     ("T1__p99", 1300.1), ("T2__p99", 1300.1), ("T4__p99", 1300.1),
     ("T1__dups", 1), ("T2__dups", 1), ("T4__dups", 1), ("T5__dups", 1), ("T6__dups", 1),
     ("T4__loss_per_10k", 1.01), ("T7__p95", 1000.1), ("T6__p99", 1300.1),
-    ("T7b__ms", 1200.1),
+    ("T7b__ms", 1200.1), ("T7load__p95", 1000.1),
 ])
 def test_judge_fails_each_bar(key, value):
     failed = [v for v in report.judge(run(**{key: value})) if not v.ok]

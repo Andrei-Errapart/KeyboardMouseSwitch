@@ -41,6 +41,8 @@ BARS = [
     ("T6", "p99", "T6 latency p99 µs", LATENCY_BAR_US),
     ("T4", "loss_per_10k", "T4 loss per 10,000", LOSS_BAR_PER_10K),
     ("T7", "p95", "T7 discovery p95 ms", DISCOVERY_BAR_MS),
+    # Owner, 2026-11-08: the discovery bar applies under load too.
+    ("T7load", "p95", "T7load discovery under load p95 ms", DISCOVERY_BAR_MS),
     ("T7b", "ms", "T7b liveness ms", LIVENESS_BAR_MS),
 ] + [(t, "dups", f"{t} dups", 0) for t in ("T1", "T2", "T4", "T5", "T6")]
 
