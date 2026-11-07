@@ -10,3 +10,26 @@ def test_jam_report_parses_firmware_text():
 def test_jam_report_ignores_other_text():
     assert interfere.jam_report("ok jam off: not running") is None
     assert interfere.jam_report("ok jam ch 45 20 %") is None
+
+
+import pytest
+
+from kmbench import metrics
+from kmbench.records import Stats
+
+
+def _stats(t, dropped=0):
+    return Stats(t=t, addr_tx=0, addr_rx=0, rec_dropped=dropped, stamp_lost=0, mic_fail=0,
+                 replay_reject=0, merged=0, queue_dropped=0, mode_switches=0,
+                 mode_switch_us_total=0, mode_switch_us_max=0)
+
+
+@pytest.mark.parametrize("bad", ["bridge", "receiver"])
+def test_discovery_result_checks_bridge_and_active_receiver(bad):
+    # The third-dongle discovery run also reports the active receiver's
+    # latency and loss: records dropped on CDC there must void the run, as
+    # in every other run, not show up as radio loss.
+    ok, dropped = [_stats(1), _stats(2)], [_stats(1), _stats(2, dropped=5)]
+    records = {"bridge": ok, "receiver": ok, bad: dropped}
+    with pytest.raises(metrics.RunInvalid):
+        interfere.discovery_result(records["bridge"], records["receiver"], ok)

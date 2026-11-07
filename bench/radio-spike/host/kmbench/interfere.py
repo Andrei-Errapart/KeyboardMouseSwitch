@@ -9,6 +9,7 @@ of the time, at a chosen power.
     python3 -m kmbench.interfere jam A|B --pct 20 --dbm 0 [--ch 45] [--jam-ch 45]
 """
 import argparse
+import pickle
 import re
 import time
 
@@ -97,14 +98,23 @@ def discovery(cand, ch, rounds=20):
                 pass
         raise
     bridge, receiver = runs.finish(b, r)
-    third = unwrap_all(third)
+    return bridge, receiver, unwrap_all(third)
+
+
+def discovery_result(bridge, receiver, third) -> dict:
+    """The third dongle's discovery times, and how the active receiver
+    fared meanwhile. All three record streams must pass check_run."""
+    for recs in (bridge, receiver):
+        metrics.check_run(recs)
     metrics.check_run(third, allow_reboot=True)
     d = metrics.discovery_times(third)
     lat = metrics.latency(bridge, receiver, clockfit.fit(clockfit.pairs(bridge, receiver)))
-    return bridge, third, {"p50": clockfit.percentile(d, 50), "p95": clockfit.percentile(d, 95),
-                           "max": max(d) if d else float("nan"), "rounds": len(d),
-                           "active_p99": lat.p99, "active_delivered": lat.delivered,
-                           "active_lost": lat.lost}
+    return {"p50": clockfit.percentile(d, 50), "p95": clockfit.percentile(d, 95),
+            "max": max(d) if d else float("nan"), "rounds": len(d),
+            "active_p99": lat.p99, "active_delivered": lat.delivered,
+            "active_lost": lat.lost,
+            "active_lost_after_ack": len(metrics.lost_after_ack(bridge, receiver)),
+            "queue_dropped": runs.counter_rise(bridge, "queue_dropped")}
 
 
 def _fmt(res):
@@ -126,14 +136,19 @@ def main(argv=None):
     j.add_argument("--dbm", type=int, default=0)
     j.add_argument("--n", type=int, default=300)
     args = ap.parse_args(argv)
+    third = None
     if args.cmd == "discovery":
-        bridge, third, res = discovery(args.cand, args.ch)
+        bridge, receiver, third = discovery(args.cand, args.ch)
+        res = discovery_result(bridge, receiver, third)
         name = "T7third"
     else:
         jam_ch = args.ch if args.jam_ch is None else args.jam_ch
-        bridge, third, res = jam_point(args.cand, args.ch, jam_ch, args.pct, args.dbm, args.n)
+        bridge, receiver, res = jam_point(args.cand, args.ch, jam_ch, args.pct, args.dbm, args.n)
         name = f"J{jam_ch}-{args.pct}pct-{args.dbm}dBm"
-    out, _ = runs.save(name, args.cand, args.ch, bridge, third, res)
+    out, _ = runs.save(name, args.cand, args.ch, bridge, receiver, res)
+    if third is not None:
+        with open(out / "third.pkl", "wb") as f:
+            pickle.dump(third, f)
     print(f"{name} {args.cand} ch {args.ch}: {_fmt(res)}")
     print(f"  saved {out}")
 
