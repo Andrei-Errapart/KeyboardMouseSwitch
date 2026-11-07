@@ -33,3 +33,35 @@ def test_discovery_result_checks_bridge_and_active_receiver(bad):
     records = {"bridge": ok, "receiver": ok, bad: dropped}
     with pytest.raises(metrics.RunInvalid):
         interfere.discovery_result(records["bridge"], records["receiver"], ok)
+
+
+def test_discovery_resets_the_third_dongle_before_linking(monkeypatch):
+    # A third dongle left a receiver by an aborted run (`kmb reboot` keeps
+    # the role) links first and takes the pipe meant for the real receiver.
+    import time
+    events = []
+
+    class Fake:
+        def __init__(self, name, opener=None):
+            self.name = name
+
+        def send(self, line):
+            events.append((self.name, line))
+
+        def mark(self):
+            return 0
+
+        def stop(self):
+            return []
+
+    def start_link(b, r, cand, **kw):
+        events.append(("start_link",))
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(interfere.runs, "Recorder", Fake)
+    monkeypatch.setattr(interfere.runs, "start_link", start_link)
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    with pytest.raises(RuntimeError):
+        interfere.discovery("A", 45, rounds=1)
+    before = events[:events.index(("start_link",))]
+    assert (interfere.THIRD, "kmb role none") in before

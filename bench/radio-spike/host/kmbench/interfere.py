@@ -66,6 +66,9 @@ def discovery(cand, ch, rounds=20):
     b, r, x = (runs.Recorder(n) for n in (runs.BRIDGE, runs.RECEIVER, THIRD))
     third = []
     try:
+        # First, so a third dongle left a receiver by an aborted run can't
+        # link and take the pipe meant for the real receiver.
+        runs.reset(x, settle=0.5)
         pipe = runs.start_link(b, r, cand, settings=[f"kmb set ch {ch}"])
         since = x.mark()
         x.send("kmb role none")
