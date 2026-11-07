@@ -110,6 +110,11 @@ static const struct {
 /* Takes effect at the next `kmb role`. */
 static void cmd_set(int argc, char **argv)
 {
+	if (argc == 2 && !strcmp(argv[1], "defaults")) {
+		params = params_default; /* settings outlive roles: runs reset them */
+		rec_text("ok set defaults");
+		return;
+	}
 	if (argc < 3) {
 		rec_text("error set: name value");
 		return;

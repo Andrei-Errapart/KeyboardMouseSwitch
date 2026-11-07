@@ -22,6 +22,7 @@ struct bench_params {
 	uint8_t fast_ramp; /* ESB use_fast_ramp_up */
 };
 extern struct bench_params params;
+extern const struct bench_params params_default; /* `kmb set defaults` */
 
 enum radio_mode { RADIO_OFF, RADIO_PTX, RADIO_PRX };
 

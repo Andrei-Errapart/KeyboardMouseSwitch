@@ -13,15 +13,17 @@
 #define RADIO_PRIO K_PRIO_COOP(2)
 #define RADIO_STACK 3072
 
-struct bench_params params = {
-	/* 2480 MHz: the quietest of 5, 25, 50, 77 and 80 on 2026-11-07 (50,
-	 * the plan's default, barely linked). T8 picks the channel. */
-	.channel = 80, .tx_power = 0, .ard_us = 435,
-	.retries_report = 3, .retries_poll = 3, .retries_ping = 1, .retries_hello = 0,
-	.ping_ms = 100, .refresh_ms = 25, .hello_ms = 20, .hello_jitter_ms = 10,
-	.poll_active_us = 500, .poll_idle_ms = 100, .loss_ms = 1000, .hold_ms = 100,
-	.fast_ramp = 1,
-};
+#define PARAMS_DEFAULT {                                                                    \
+	/* 2480 MHz: the quietest of 5, 25, 50, 77 and 80 on 2026-11-07 (50,       \
+	 * the plan's default, barely linked). T8 picks the channel. */            \
+	.channel = 80, .tx_power = 0, .ard_us = 435,                                \
+	.retries_report = 3, .retries_poll = 3, .retries_ping = 1, .retries_hello = 0, \
+	.ping_ms = 100, .refresh_ms = 25, .hello_ms = 20, .hello_jitter_ms = 10,    \
+	.poll_active_us = 500, .poll_idle_ms = 100, .loss_ms = 1000, .hold_ms = 100, \
+	.fast_ramp = 1,                                                             \
+}
+struct bench_params params = PARAMS_DEFAULT;
+const struct bench_params params_default = PARAMS_DEFAULT;
 
 static const uint8_t base0[4] = {0x4B, 0x4D, 0x53, 0x44}; /* "KMSD": discovery */
 static const uint8_t base1[4] = {0x4B, 0x4D, 0x53, 0x52}; /* "KMSR": receivers */

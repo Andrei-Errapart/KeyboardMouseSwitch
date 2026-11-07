@@ -61,10 +61,12 @@ class Recorder:
 
 
 def reset(*recorders, settle=1.5):
-    """Stop any role and let records from earlier runs drain, so a run
-    never reads another run's backlog. Returns the marks to read from."""
+    """Stop any role, restore default settings and let records from earlier
+    runs drain, so a run never inherits another run's settings or reads its
+    backlog. Returns the marks to read from."""
     for x in recorders:
         x.send("kmb role none")
+        x.send("kmb set defaults")  # settings outlive roles
     time.sleep(settle)
     return [x.mark() for x in recorders]
 
