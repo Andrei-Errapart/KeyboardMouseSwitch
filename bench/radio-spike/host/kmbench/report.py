@@ -6,7 +6,10 @@ for the decision and the report, a dict maps "A"/"B" to such results.
 import math
 from dataclasses import dataclass
 
-LATENCY_BAR_US = 1000.0     # "about 1 ms or less over the air"
+# "Bridge to receiver over the air ≤ 1 ms" plus the budget's separate
+# "processing and encryption: a few hundred µs", because latency is measured
+# from the bridge's queue to the receiver's application (owner, 2026-11-07).
+LATENCY_BAR_US = 1300.0
 LOSS_BAR_PER_10K = 1.0      # T4: at most 1 report in 10,000
 DISCOVERY_BAR_MS = 1000.0   # "known to the hub within about a second"
 LIVENESS_BAR_MS = 1200.0    # link loss after 1 s, plus margin

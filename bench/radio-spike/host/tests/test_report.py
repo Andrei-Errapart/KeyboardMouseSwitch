@@ -4,12 +4,12 @@ from kmbench import report
 
 # A run that sits exactly on every bar (the bars are inclusive).
 GOOD = {
-    "T1": {"p50": 400.0, "p99": 1000.0, "max": 1500.0, "delivered": 1000, "lost": 0, "dups": 0},
-    "T2": {"p50": 500.0, "p99": 1000.0, "max": 1800.0, "delivered": 1500, "lost": 0, "dups": 0},
-    "T4": {"p50": 450.0, "p99": 1000.0, "max": 3000.0, "delivered": 99990, "lost": 10,
+    "T1": {"p50": 400.0, "p99": 1300.0, "max": 1500.0, "delivered": 1000, "lost": 0, "dups": 0},
+    "T2": {"p50": 500.0, "p99": 1300.0, "max": 1800.0, "delivered": 1500, "lost": 0, "dups": 0},
+    "T4": {"p50": 450.0, "p99": 1300.0, "max": 3000.0, "delivered": 99990, "lost": 10,
            "dups": 0, "loss_per_10k": 1.0},
     "T5": {"p50": 3.0, "p95": 90.0, "max": 120.0, "dups": 0},
-    "T6": {"p50": 420.0, "p99": 1000.0, "max": 1600.0, "delivered": 1000, "lost": 0, "dups": 0},
+    "T6": {"p50": 420.0, "p99": 1300.0, "max": 1600.0, "delivered": 1000, "lost": 0, "dups": 0},
     "T7": {"p50": 120.0, "p95": 1000.0, "max": 1400.0},
     "T7b": {"ms": 1200.0},
 }
@@ -29,9 +29,9 @@ def test_judge_passes_good_run():
 
 
 @pytest.mark.parametrize("key,value", [
-    ("T1__p99", 1000.1), ("T2__p99", 1000.1), ("T4__p99", 1000.1),
+    ("T1__p99", 1300.1), ("T2__p99", 1300.1), ("T4__p99", 1300.1),
     ("T1__dups", 1), ("T2__dups", 1), ("T4__dups", 1), ("T5__dups", 1), ("T6__dups", 1),
-    ("T4__loss_per_10k", 1.01), ("T7__p95", 1000.1), ("T6__p99", 1000.1),
+    ("T4__loss_per_10k", 1.01), ("T7__p95", 1000.1), ("T6__p99", 1300.1),
     ("T7b__ms", 1200.1),
 ])
 def test_judge_fails_each_bar(key, value):
