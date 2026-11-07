@@ -722,22 +722,26 @@ discovery costs more than expected. B also has no idle-poll delay when
 switching.
 
 **Chosen: B** (owner, 2026-11-07, after the bench spike; results in
-`docs/bench/2026-11-radio-ab.md`). By the bench's bars B misses two:
+`docs/bench/2026-11-radio-ab.md`). By the bench's bars B misses four:
+- latency in T1 and T2, by under a microsecond (p99 1,300.6 and 1,300.1 µs
+  against 1,300);
 - the active receiver's latency while another linked receiver doesn't
   answer (T6);
 - discovery while input streams (T7 under load).
 
-Two of the rules below address them: PINGs to idle receivers go out once,
-and the bridge keeps a listening window between reports. A missed
-three latency bars, and its discovery under load was slower than a second.
+Two of the rules below address the last two: PINGs to idle receivers go
+out once, and the bridge keeps a listening window between reports, with
+little work around each switch. A missed three latency bars, and its
+discovery under load was slower than a second.
 
 - **Measured** on channel 45, 2 m apart, with encryption, from the bridge's
   queue to the receiver's application:
-  - median 715 µs, p99 1.28–1.30 ms;
-  - 0.6 reports lost in 10,000 over 100,000 reports;
+  - median 720 µs, p99 1.28–1.30 ms;
+  - 0.5 reports in 10,000 lost to the radio over 100,000 reports, plus one
+    dropped by ESB after it was acknowledged (see the packet-ID rule);
   - discovery 2.6 ms (p95), link loss noticed in 1 s.
 
-  A's median is about 920 µs, and A takes 195 ms to switch computers against
+  A's median is about 916 µs, and A takes 195 ms to switch computers against
   B's 0.7 ms.
 - **Airtime:** 0.97% of the channel with one receiver active and no input;
   about 2.2% with seven receivers known. A's figures are 30% and 31%.
@@ -762,7 +766,17 @@ three latency bars, and its discovery under load was slower than a second.
     receiver's reports by up to 0.9 ms.
   - **The bridge keeps a short listening window between reports,** about
     0.3 ms. Without it, a receiver can't join while input streams at 1 kHz:
-    0 of 20 joined on the bench.
+    0 of 20 joined on the bench. Keep the work around each switch small:
+    seal the WELCOME once, seal the next report before switching, and
+    don't re-initialise ESB if it can be avoided. On the bench that
+    overhead was about 300 µs per gap.
+  - **ESB's packet ID continues across re-initialisation.** `esb_init`
+    resets it, and the receiver's ESB drops a packet whose ID and checksum
+    both match the previous one, after acknowledging it. With the ID
+    restarting at every switch, about one report in 65,536 vanishes with no
+    retry possible. Keep the sequence going (for example with
+    `esb_reuse_pid()` after each `esb_init`), or switch modes without
+    re-initialising ESB.
   - **Retries on one channel don't beat a periodic interferer.** If the link
     hops, it hops on retry or varies the retry delay.
   - **Placement:**

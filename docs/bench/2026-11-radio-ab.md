@@ -10,14 +10,17 @@ notes from the day.
 
 **Candidate B: the bridge transmits on demand.** Owner's call, 2026-11-07.
 
-B is faster in the typical case: its median latency is 715 µs, against
-about 920 µs for A, which waits for the next poll. B switches computers in
+B is faster in the typical case: its median latency is 720 µs, against
+about 916 µs for A, which waits for the next poll. B switches computers in
 0.7 ms against A's 195 ms. It keeps 2% of the channel busy with seven
 receivers known, against A's 31%. And under interference it loses fewer
 reports.
 
 By the plan's rule (B if B passes every bar, else A if A passes, else
-neither), the result is "neither". B misses two bars:
+neither), the result is "neither". B misses four bars:
+- **T1 and T2, by less than a microsecond.** Its p99 is 1,300.6 and
+  1,300.1 µs against the 1,300 µs bar, once the clock pairs are corrected
+  for the radio's chain delays (see "How latency is measured").
 - **T6.** Its PINGs to an absent receiver take two attempts. With one
   attempt it passed, in a single run that wasn't saved (see T6).
 - **T7 under load.** No receiver joined while the bridge streamed, because
@@ -26,7 +29,7 @@ neither), the result is "neither". B misses two bars:
   change, not a setting.
 
 A misses three, T1, T2 and T6, and wasn't run in T4 or T7 under load. In
-the third-dongle version of T7 under load, A's discovery p95 was 2,333 ms,
+the third-dongle version of T7 under load, A's discovery p95 was 1,980 ms,
 which fails too.
 
 The latency bar is 1.3 ms, not the plan's 1 ms. Latency is measured from
@@ -36,12 +39,15 @@ encryption at both ends. The spec's latency budget lists that separately
 Owner's call, 2026-11-07.
 
 The 1.3 ms is a judgement, not a figure the measurements give: the dongles
-themselves account for about 600 µs of B's 715 µs median (see "How latency
+themselves account for about 600 µs of B's 720 µs median (see "How latency
 is measured"), twice the 300 µs the bar allows for them. The bar was set
 after the first runs, at 21:08 UTC, when B's p99 of 1,296 µs had already
-shown up twice (20:41 and 20:46 UTC). That is 4 µs under the new bar. At
-the plan's 1 ms, B would also fail T1, T2 and T4; A's misses stay the
-same. The result is "neither" under either bar.
+shown up twice (20:41 and 20:46 UTC). That was 4 µs under the new bar.
+The final review then found the clock pairs 4.4 µs biased in B's favour;
+corrected, the official T1 and T2 runs read 1,300.6 and 1,300.1 µs, just
+over it. At the
+plan's 1 ms, B would also fail T4; A's misses stay the same. The result is
+"neither" under either bar.
 
 ## Setup
 
@@ -96,12 +102,23 @@ Both dongles timestamp every radio ADDRESS event with a 1 MHz timer. Packets
 that got through on the first try fit one clock to the other, with a 99th
 percentile residual of 0.9–2.8 µs (6.9 µs in T4 with the roles swapped).
 
-B's typical 715 µs breaks down as:
-- 374 µs inside the bridge, of which about 95 µs is sealing;
-- 116 µs on air;
-- 225 µs at the receiver, of which about 95 µs is opening.
+The residual shows how consistent the fit is, not how accurate. The radio
+raises ADDRESS 0.6 µs after sending and 5.0 µs after receiving at 2 Mbit/s
+(Nordic's figures in Zephyr's `radio_nrf52840.h`). B's pairs all run from
+bridge to receiver and A's the other way, so uncorrected, B's latencies read
+4.4 µs low and A's 4.4 µs high. The final review caught this. Every figure
+here is corrected (re-analysed from the saved records on 2026-11-08), except
+T8's and one unsaved T6 run, which are marked.
 
-About 200 µs inside the bridge isn't accounted for yet.
+B's typical 720 µs breaks down as:
+- 374 µs inside the bridge, of which about 95 µs is sealing and about 65 µs
+  re-initialising ESB to switch from listening to sending;
+- 116 µs on air;
+- about 230 µs at the receiver, of which about 95 µs is opening.
+
+About 140 µs inside the bridge isn't accounted for yet. One lead from the
+review: the CDC writer runs on Zephyr's system work queue, which is
+cooperative, so the radio thread can't preempt it.
 
 ## Results
 
@@ -115,38 +132,49 @@ Pass bars:
 
 | Test | What it does | B | A |
 |---|---|---|---|
-| T1 single reports | 1,000 reports, 20–200 ms apart | p50 715, **p99 1,296**, max 1,875 µs; 0 lost | p50 920, **p99 1,520**, max 2,275 µs; 0 lost |
-| T2 load | bursts, then a 1 kHz stream for 10 s (10,500 reports) | p50 830, **p99 1,296** µs; 0 lost | p50 900, **p99 1,448** µs; 0 lost |
+| T1 single reports | 1,000 reports, 20–200 ms apart | p50 720, **p99 1,300.6** (fails by 0.6), max 1,880 µs; 0 lost | p50 916, **p99 1,515**, max 2,271 µs; 0 lost |
+| T2 load | bursts, then a 1 kHz stream for 10 s (10,500 reports) | p50 834, **p99 1,300.1** µs (fails by 0.1); 0 lost | p50 896, **p99 1,443** µs; 0 lost |
 | T3 idle airtime | active receiver linked, no input, 60 s | 0.97% busy; with seven receivers 2.2%; 337 µs per transaction | 29.7% busy; with seven receivers 31%; 237 µs per transaction |
-| T4 reliability | 100,000 reports at 200 Hz | **0.6 lost per 10,000**, p99 1,279 µs; second attempt 4.8%, fourth 0.05%; one MIC failure | not run (owner's call: A was out) |
-| T4, roles swapped | the Mac mini dongle as the bridge | **0.2 lost per 10,000**, p99 701 µs | — |
+| T4 reliability | 100,000 reports at 200 Hz | **0.6 lost per 10,000**: 0.5 to the radio, plus one report the receiver dropped after acknowledging it (see notes); p99 1,283 µs; second attempt 4.8%, fourth 0.05%; one MIC failure | not run (owner's call: A was out) |
+| T4, roles swapped | the Mac mini dongle as the bridge | **0.2 lost per 10,000**, both dropped after acknowledgement, none to the radio; p99 706 µs | — |
 | T5 switch | delay from `active` to the first report | p50 0.69, p95 0.69, max 1.3 ms | p50 195, p95 286, max 297 ms |
-| T6 absent receiver | T1 and the stream with one receiver that never answers | **p99 1,542 µs** (fails); 0 lost, 24 merged | **p99 1,523 µs** (fails); 0 lost |
+| T6 absent receiver | T1 and the stream with one receiver that never answers | **p99 1,546 µs** (fails); 0 lost, 24 merged | **p99 1,519 µs** (fails); 0 lost |
 | T7 discovery | receiver reboots 20 times | p50 2.5, **p95 2.6 ms** | p50 3.1, **p95 3.1 ms** |
 | T7 under load | the same, while the bridge streams 1,000 reports a second to a receiver that never answers | **0 of 20 joined** (fails) | not run: needs a third dongle (see Extra experiments) |
 | T7b liveness | receiver stops | **986 ms** | **1,002 ms** |
-| T8 channels | scan, then 20,000 reports on each of the three quietest channels | ch 11: 0.5, ch 16: 0, ch 39: 0.5 lost per 10,000; p99 1,278 µs on each | — |
+| T8 channels | scan, then 20,000 reports on each of the three quietest channels | ch 11: 0.5, ch 16: 0, ch 39: 0.5 lost per 10,000; p99 1,278 µs on each, uncorrected (about 1,282 corrected; the records weren't saved) | — |
 
 No run had a duplicate. In T3, the seven-receiver figures add six idle
 receivers' PING or POLL traffic to the one measured.
 
 Notes on the results:
-- **B's p99 of 1,296 µs is a report retried once.** One retry costs
-  1,278–1,296 µs across runs, against the 1,300 µs bar, so B passes as long
-  as fewer than 1% of reports need two or more retries. In T4, 5.2% needed
-  a retry and 0.43% needed two or more. The margin is thin: the
-  once-retried latency varies by 18 µs between runs, and the bar is only
-  4 µs above its highest value.
-- **T4's pass isn't clear-cut.** With 6 losses in 100,000 reports, the
-  one-sided 95% upper bound is about 1.2 per 10,000, above the bar.
+- **B's p99 of about 1,300 µs is a report retried once.** One retry costs
+  1,283–1,301 µs across runs, right at the 1,300 µs bar, so B's p99 sits on
+  the bar whenever more than 1% of reports need a retry and fewer than 1%
+  need two or more. In T4, 5.2% needed a retry and 0.43% needed two or
+  more. T1 and T2 land 0.1–0.6 µs over; T4 lands 17 µs under.
+- **Some of the loss isn't radio loss.** The bench bridge re-initialises
+  ESB at every switch between listening and sending, and that restarts
+  ESB's packet ID. So consecutive reports usually carry the same ID. The
+  receiver's ESB treats a packet whose ID and checksum both match the
+  previous one as a retransmission: it acknowledges it and drops it. That
+  happens to about one report in 65,536. No retry can recover it, and the
+  bridge then gets the previous ACK payload again, which shows as a replay
+  (the bridge's replay count rose by exactly 1 and 2). It explains one of
+  T4's six losses and both of T4 swapped's. The harness now counts these as
+  `lost_after_ack`. See Finding 7.
+- **T4's pass isn't clear-cut.** With 5 radio losses in 100,000 reports,
+  the one-sided 95% upper bound is about 1.05 per 10,000, just above the
+  bar.
 - **In T4 with the roles swapped, most retries were lost ACKs.** The
   receiver already had the report. The Mac mini end receives worse than
   anduq7's: the Keychron keyboard and mouse were talking Bluetooth to it.
 - **B's T6 miss is the second attempt of each PING to the absent
   receiver.** That second attempt holds a report up by up to 0.9 ms. While
   reports waited, 24 were merged into the motion report queued ahead of
-  them; none were lost. With PINGs sent once: p99 1,268 µs and 11,000 of
-  11,000 delivered (one run, not saved). A real absent receiver is dropped
+  them; none were lost. With PINGs sent once: p99 1,268 µs uncorrected
+  (about 1,272 corrected) and 11,000 of 11,000 delivered (one run, not
+  saved). A real absent receiver is dropped
   after 1 s, so this case lasts about a second each time a receiver
   disappears.
 - **T2 had one echo** (see Findings), out of about 11,000 transactions. In
@@ -173,7 +201,13 @@ The figures above come from these runs in `bench/radio-spike/results/`
 | T7b | `20261107T212606Z-T7b-B` | `20261107T212612Z-T7b-A` |
 | T8 | `20261107T221900Z-T8-B` | — |
 
-The extra experiments are the `J…` and `T7third` runs from 22:29 on.
+The extra experiments are the `J…` runs from 22:29 on, and
+`20261107T234417Z-T7third-B` and `20261107T235026Z-T7third-A`. The earlier
+`T7third` runs don't count: 22:40 and 22:43 didn't check the active
+receiver's records, and 23:47 linked the wrong pipe (see Extra
+experiments). The latency runs above were re-analysed on
+2026-11-08 with the corrected clock pairs; each `result.json` says so in
+its `note`.
 
 The earlier runs in the same directory don't count:
 - **18:02–18:05, channel 77:** a short pass of each test (T1 with 100
@@ -197,13 +231,31 @@ the third dongle rebooted 20 times.
 
 | | Joined | Discovery | The active receiver meanwhile |
 |---|---|---|---|
-| B | **0 of 20** within 5 s (4,564 HELLOs, 1 acknowledged) | — | 165,474 delivered, 0 lost, p99 1,422 µs |
-| A | 20 of 20 | p50 570 ms, **p95 2,333 ms**, max 3,523 ms | 894 of 75,502 lost, p99 6.1 ms |
+| B | **0 of 20** within 5 s | — | 171,489 delivered, 0 lost, p99 1,434 µs |
+| A | 20 of 20 | p50 450 ms, **p95 1,980 ms**, max 1,999 ms | 669 of 71,486 lost (41 of them dropped from the bridge's queue, not on air), p99 6.2 ms |
+
+Every record stream in these runs passed the same integrity checks as the
+plan's runs. The first versions of these runs (22:40 and 22:43) checked
+only the third dongle; they agreed: B 0 of 20, A p95 2.3 s. A third, at
+23:47, made the wrong dongle active, because the third dongle was still a
+receiver left over from an aborted run. The harness now resets it first.
 
 B's bridge listens for HELLOs only when it has nothing to send. Under a
 steady 1 kHz stream it goes back to listening only briefly between reports,
-too briefly to catch a HELLO. A new receiver therefore waits for the first
-pause in input.
+too briefly to catch a HELLO: a HELLO and its WELCOME need about 260 µs of
+listening. A new receiver therefore waits for the first pause in input.
+
+Much of that is the bench's own overhead, not the protocol. In each gap the
+bench bridge:
+- re-initialises ESB twice, about 65 µs each;
+- seals a fresh WELCOME every time it starts listening, about 95 µs;
+- seals the next report only after it has stopped listening, about 95 µs.
+
+Under the stream, the gaps between its transmissions were either about
+350 µs or about 850 µs, and it listened in only about half of them. A
+product bridge could get most of this back: seal the WELCOME once, seal the
+next report before switching, and avoid re-initialising ESB (Finding 7).
+Whether B then joins under load hasn't been measured.
 
 The plan's version of this test (T7 under load) had the bridge stream to an
 absent receiver that is never dropped. There B got 0 of 20 too.
@@ -279,7 +331,10 @@ What this shows:
    receiver that has just gone away holds the active receiver's reports up
    by up to 0.9 ms until it is dropped (T6).
 3. **The bridge needs a guaranteed listening window between reports**, about
-   0.3 ms. Otherwise a receiver can't join while input streams.
+   0.3 ms, and as little work as possible around each switch. Otherwise a
+   receiver can't join while input streams. That means sealing the WELCOME
+   once, sealing the next report before switching, and not re-initialising
+   ESB if it can be avoided (see Extra experiments and Finding 7).
 4. **Retries on a single channel don't beat a periodic interferer.** If the
    product hops, hop on retry, or vary the retry delay.
 5. **Placement matters more than distance.** Most of the day's losses came
@@ -298,6 +353,17 @@ What this shows:
    40 PINGs acknowledged to 1 of 15 later the same day, and the Keychron
    receivers moved across the band. A fixed channel is fragile; the hub
    should be able to change channel.
+7. **ESB's packet ID must not restart at every switch.** `esb_init` sets it
+   back to zero, and B's bridge re-initialises ESB to switch between
+   listening and sending.
+   - The receiver's ESB drops a packet whose ID and checksum both match the
+     previous one as a retransmission, after acknowledging it. So about one
+     report in 65,536 vanishes and no retry can recover it: 0.15 per 10,000,
+     15% of the loss budget. It caused 3 of the 8 losses in T4.
+   - Keep the ID going across re-initialisation, or switch modes without
+     re-initialising ESB. For example, count writes per pipe and, after each
+     `esb_init`, step the ID back with `esb_reuse_pid()` until the next one
+     continues the sequence.
 
 ## Not measured
 
@@ -311,8 +377,9 @@ What this shows:
   this once the hub forwards input.
 - **T4 with busy 2.4 GHz Wi-Fi**, which the plan asked for. The Mac mini's
   own network is on 5 GHz; the 2.4 GHz networks nearby are the neighbours'.
-- **B with a listening window between reports.** That's a firmware change
-  for the product; it hasn't been tried.
+- **B with a listening window between reports and less work per switch.**
+  That's a firmware change for the product; it hasn't been tried, so
+  whether B then joins under load is open.
 - **The nRF52840's CCM peripheral**, which would likely be faster than
   ECB with software CCM.
 - **The hub-to-bridge USB hop**, which needs the hub firmware (latency
