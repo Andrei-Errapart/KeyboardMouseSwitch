@@ -129,16 +129,28 @@ way), so it stays on.
 dongles at once. On 2026-11-07, with no bench traffic:
 
 - anduq7's dongle (under the table) has a broadband noise floor of
-  -78 to -80 dBm across the whole band, above -80 dBm 66–100% of the time
-  at 2400–2445 MHz and 10–40% above that: USB 3 or PC noise at that spot.
-  The Mac mini's dongle sees -83 to -84 dBm.
-- At the Mac mini, strong bursts (up to -18 dBm) at 2423–2433 and
-  2470–2475 MHz: the Keychron receivers beside it.
+  -78 to -80 dBm across the whole band; the Mac mini's dongle sees -83 to
+  -84 dBm. PC noise at that spot (anduq7 also runs a USB 3 drive at
+  5 Gbps).
+- At the Mac mini, strong bursts (up to -18 dBm) at 2402–2403, 2425–2427,
+  2470–2474 and 2479 MHz: the Keychron receivers beside it. anduq7 sees
+  the same bursts 15–25 dB weaker.
+- At anduq7, bursts up to -30 dBm at 2418–2437 MHz, stronger there than
+  at the Mac mini. The Mac mini's Wi-Fi lists two 2.4 GHz networks, on
+  channels 1 (2401–2423 MHz) and 4 (2416–2438 MHz); its own network is on
+  5 GHz.
 - Which channels work changes within minutes: channel 80 went from 40 of
   40 PINGs acknowledged to 1 of 15.
 
-The bridge's reception is the weak link, and the product's bridge sits on
-the hub on anduq7, in the same spot unless it goes on an extension.
+Distance is not the problem: both dongles receive bench packets at about
+-60 dBm (ESB's per-packet RSSI, 2 m apart, one under the table), some
+30 dB above sensitivity, and a -79 dBm floor leaves ~19 dB of margin.
+Packets are lost to bursts 25–40 dB stronger than the signal.
+
+The scan first counted time above -80 dBm as busy. At anduq7 that mostly
+measured the floor sitting at the threshold (it read 60–90% busy below
+2445 MHz), so the threshold is now -70 dBm, about where an interferer on
+the channel starts to break a -60 dBm packet.
 
 ## Candidate A loses reports where B doesn't
 

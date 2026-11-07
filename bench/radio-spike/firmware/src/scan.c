@@ -11,7 +11,10 @@
 #include "rec.h"
 #include "stamp.h"
 
-#define BUSY_DBM 80 /* samples above -80 dBm count as busy */
+/* Samples above -70 dBm count as busy: bench packets arrive at about
+ * -60 dBm, so weaker energy does them little harm. At -80 the count
+ * mostly measured the noise floor at anduq7 (median -78 to -79 dBm). */
+#define BUSY_DBM 70
 #define SAMPLE_GAP_US 100
 
 static void wait_event(nrf_radio_event_t ev)

@@ -160,7 +160,7 @@ def scan(names, dwell_ms):
             cells.append(f"{r.rssi_median:4d} {r.rssi_max:4d} {r.busy_permille / 10:5.1f}% "
                          f"{'#' * (r.busy_permille // 50):<6}" if r else " " * 22)
         print(f"{ch:2d} {2400 + ch} " + "  ".join(cells))
-    print("columns per dongle: median dBm, max dBm, time above -80 dBm")
+    print("columns per dongle: median dBm, max dBm, time above -70 dBm")
     return rows
 
 
