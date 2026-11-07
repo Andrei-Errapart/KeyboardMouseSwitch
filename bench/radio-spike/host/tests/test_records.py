@@ -93,3 +93,21 @@ def test_unwrap_all_handles_stamps_and_boots():
     assert (out[1].t, out[1].t_tx_addr, out[1].t_rx_addr) == (
         0x100000100, 0xFFFFFFF0, 0x100000010)
     assert out[3].t == 7
+
+
+def test_unwrap_all_keeps_unknown_stamps_zero():
+    # A stamp of 0 means "unknown" (stamp_lost, or not the newest payload).
+    # Once a dongle has run past 2**31 µs (35.8 min), the window nearest to
+    # 0 is 2**32: unwrapped, an unknown stamp would become a real-looking
+    # time and slip past pairs()'s zero check into the clock fit.
+    recs = [
+        r.Stats(t=0x90000000, addr_tx=0, addr_rx=0, rec_dropped=0, stamp_lost=0,
+                mic_fail=0, replay_reject=0, merged=0, queue_dropped=0,
+                mode_switches=0, mode_switch_us_total=0, mode_switch_us_max=0),
+        r.TxDone(t=0x90000100, id=1, pipe=1, kind=6, attempts=1, ok=1, len=16,
+                 ack_len=0, t_tx_addr=0, t_rx_addr=0),
+        r.RxPkt(t=0x90000200, id=2, pipe=1, kind=3, len=25, rssi=60, t_rx_addr=0),
+    ]
+    out = r.unwrap_all(recs)
+    assert (out[1].t_tx_addr, out[1].t_rx_addr, out[2].t_rx_addr) == (0, 0, 0)
+    assert out[2].t == 0x90000200

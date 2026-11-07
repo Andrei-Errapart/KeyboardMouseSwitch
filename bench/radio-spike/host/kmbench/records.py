@@ -185,12 +185,13 @@ _TIME_FIELDS = ("t", "t_tx_addr", "t_rx_addr")
 
 
 def unwrap_all(records: list) -> list:
-    """Unwrap the times of one dongle's records, restarting at each Boot."""
+    """Unwrap the times of one dongle's records, restarting at each Boot.
+    A stamp of 0 means unknown and stays 0."""
     u, out = Unwrapper(), []
     for rec in records:
         if isinstance(rec, Boot):
             u.reset()
-        fields = {f: u.unwrap(getattr(rec, f)) for f in _TIME_FIELDS
-                  if hasattr(rec, f)}
+        fields = {f: u.unwrap(getattr(rec, f)) if f == "t" or getattr(rec, f) else 0
+                  for f in _TIME_FIELDS if hasattr(rec, f)}
         out.append(dataclasses.replace(rec, **fields) if fields else rec)
     return out
