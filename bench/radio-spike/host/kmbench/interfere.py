@@ -86,6 +86,8 @@ def discovery(cand, ch, rounds=20):
             x.wait_for(est, 5.0)
         b.send("kmb traffic stop")
         x.send("kmb role none")
+        x.send("kmb stats")  # every run's records end with a STATS
+        time.sleep(1.5)
         third += x.stop()
     except BaseException:
         for y in (b, r, x):
