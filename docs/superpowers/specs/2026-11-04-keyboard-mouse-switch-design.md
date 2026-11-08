@@ -93,7 +93,7 @@ mouse or receiver works. Target latency is about 3–5 ms end to end, against
 
 | Item | Where | Notes |
 |---|---|---|
-| RP2350 board with USB-C and USB-A | anduq7 | USB-C is the RP2350's native USB. USB-A is expected to be PIO-USB on two GPIOs. **Verify the pins, the VBUS path, the chip stepping and charger power-up** (see risk 2). |
+| Waveshare RP2350-USB-A | anduq7 | RP2350A (QFN60), stepping A4 (marking `RP2350A0A4`), 2 MB flash (W25Q16JV), 12 MHz crystal. USB-C is the RP2350's native USB, with 5.1 kΩ pull-downs on both CC pins. USB-A is PIO-USB on GPIO12 (D+) and GPIO13 (D−), through 27 Ω each. Its VBUS is wired straight to USB-C VBUS, with no switch, fuse or diode. R13 (1.5 kΩ from D+ to 3V3) is fitted for device mode; Waveshare's FAQ says to remove it if devices won't enumerate in host mode. WS2812 RGB LED on GPIO16; BOOT and RESET buttons. Checked against Waveshare's schematic on 2026-11-05. **Still to verify: R13 and charger power-up** (see risk 2). |
 | USB 2.0 hub (plain, no card reader) | on the RP2350's USB-A | Runs at full speed behind PIO-USB. |
 | Keychron keyboard 2.4 GHz receiver | on the hub | Must work at full speed. |
 | Keychron mouse 2.4 GHz receiver (M6) | on the hub | Must work at full speed; a 4K/8K receiver falls back to 1 kHz. |
@@ -110,8 +110,9 @@ mouse or receiver works. Target latency is about 3–5 ms end to end, against
   - **Charger mode.** When anduq7 is shut down for maintenance, its USB-C cable
     is moved to a charger, which is always at hand. The hub must then run
     normally with no host on USB-C: computer 1 counts as offline and the Macs
-    keep working. This is supported from the first version, and relies on the
-    board powering up from the charger (risk 2).
+    keep working. This is supported from the first version. The board has
+    5.1 kΩ pull-downs on both CC pins, so a USB-C charger powers it through a
+    C-to-C cable; the bench check confirms this once (risk 2).
   - **Later option:** give anduq7 its own dongle and leave the RP2350 on a
     charger permanently.
 - **Computers 2 and 3: Mac mini and MacBook Pro.** Each has its own dongle.
@@ -143,8 +144,8 @@ There are two firmware images:
 
 ### Hub firmware (RP2350)
 
-- **USB host** on USB-A through Pico-PIO-USB, with TinyUSB host and hub
-  support.
+- **USB host** on USB-A through Pico-PIO-USB (D+ on GPIO12, D− on GPIO13),
+  with TinyUSB host and hub support.
   - HID host for any keyboard, mouse or receiver. It uses a generic
     report-descriptor parser (in `common/`, see "Shared code"), in the way HID
     Remapper does, that handles:
@@ -176,7 +177,8 @@ There are two firmware images:
     - a dongle still in the Nordic bootloader (`1915:521f`).
     
     A protocol version mismatch between hub and bridge is reported. One way
-    is for the hub to blink its LED, so it isn't silent.
+    is for the hub to blink its RGB LED (a WS2812 on GPIO16, driven by a PIO
+    state machine that PIO-USB leaves free), so it isn't silent.
   - **Same image, different role.** A dongle on a computer never receives the
     identity query or the "become bridge" command, so it stays a receiver. Only
     the dongle plugged into the hub becomes the bridge. Commands are framed
@@ -864,11 +866,12 @@ discovery under load was slower than a second.
 - **RP2350:** from anduq7, run `picotool load -x -f --pid 0x0001 hub.uf2`.
   The reset interface reboots the board into BOOTSEL, so no button is needed;
   the BOOTSEL button remains the fallback.
-  - If the board's USB-A VBUS comes straight from USB-C VBUS (risk 2), the
-    hub behind it stays powered through the reboot.
-  - If it doesn't, the devices behind it power-cycle. That is harmless here,
-    because reflashing isn't switching, and the receivers' timeout releases
-    any keys held on the Macs.
+  - The board's USB-A VBUS comes straight from USB-C VBUS (see "Hardware"),
+    so the hub behind it stays powered through the reboot. While the RP2350
+    is quiet, the hub suspends its ports, so the bridge first sees a USB
+    suspend, and a USB reset only when the new firmware enumerates the hub
+    again. The bridge releases everything on the active receiver at the
+    suspend (see "Dongle firmware").
 - **Receiver dongles:** a framed CDC command makes the dongle wipe its key
   material from RAM and pull P0.19 low. On the PCA10059 that pin is wired to
   reset (Nordic's own USB DFU trigger does the same), and the bootloader
@@ -1008,17 +1011,18 @@ The MacBook Pro joins once its dongle is flashed.
 
 1. Both Keychron receivers and the hub enumerate behind PIO-USB on this
    RP2350 board, and their reports arrive at full speed.
-2. The board itself:
-   - which GPIOs drive the USB-A port, and whether USB-A VBUS comes straight
-     from USB-C VBUS;
-   - the RP2350 stepping, from the package marking (A2 or A4). On A2,
-     erratum RP2350-E9 can make the internal pull-downs that PIO-USB uses to
-     detect plugging and unplugging latch at about 2 V. The fix is external
-     pull-downs on D+ and D− (the datasheet gives the maximum value). A4
-     fixes the erratum;
-   - that the board powers up from a USB-C charger through a C-to-C cable,
-     which needs 5.1 kΩ pull-downs on CC. Charger mode depends on it. If the
-     board lacks them, a USB-A charger with an A-to-C cable still works.
+2. The board itself. Waveshare's schematic settles the pins, the VBUS path
+   and the CC pull-downs (see "Hardware"). The chip is stepping A4 (package
+   marking `RP2350A0A4`, read by the owner on 2026-11-05), so erratum
+   RP2350-E9, which upsets PIO-USB's pull-downs on A2, doesn't apply.
+   Still open:
+   - whether the hub enumerates and stays stable with R13 fitted. Only the
+     hub, a full-speed device, sits directly on the port, so R13 most likely
+     does no harm. It does keep D+ high, so the port most likely never sees
+     the hub unplugged; replugging the hub may then need a hub restart.
+     Removing R13 is the fallback;
+   - that the board really powers up from a USB-C charger through a C-to-C
+     cable. Charger mode depends on it.
 3. Latency, airtime and reliability of radio candidates A and B, with
    encryption on. Include the active receiver's latency while another linked
    receiver is unplugged.
